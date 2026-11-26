@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+  path_filters:
+    - "!libs/agent-analyzer-py/**"
+    - "!**/*.sum"
+    - "!go.work.sum"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/*.pb.go"
+    - "!**/testdata/**"
+    - "!libs/kep/vocabulary/zz_*.gen.go"
+    - "!docs/kep-vocabulary.md"
+    - "!services/intelligence-platform-api/docs/openapi.yaml"
+    - "!web/console/src/api/schema.d.ts"
+    - "!docs/architecture/CHANGELOG.md"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        Focus on functional bugs, security vulnerabilities, authz/authn flaws, injection risks, secret exposure, error handling, data races, resource leaks, and missing tests.
+        Enforce tenant isolation: tenant identity must be read only via `tenantauth.TenantFrom(ctx)` and cross-tenant lookups must return 404, never 403.
+    - path: "libs/classification/**"
+      instructions: |
+        Enforce module import boundaries: `libs/classification` must never import `libs/mcp-connector` or any package under `services/`.
+    - path: "libs/mcp-connector/**"
+      instructions: |
+        Enforce module import boundaries: `libs/mcp-connector` must never import `libs/classification` or any package under `services/`.
+    - path: "services/intelligence-platform-core/store/migrations/**"
+      instructions: |
+        Changes to `agent_job` or `repo_dependency_*` tables must keep Go goose migrations and Python raw SQL in `services/python-agent-worker/` synchronized in the same release.
+    - path: "services/python-agent-worker/**"
+      instructions: |
+        Changes to `agent_job` or `repo_dependency_*` tables must keep Python raw SQL and Go goose migrations in `services/intelligence-platform-core/store/migrations/` synchronized in the same release.
+        Python code must import `analyze_repo` from `p9_repodep`, never `code_analyzer`.
+    - path: "services/**/obs/**"
+      instructions: |
+        Enforce Prometheus metric label cardinality rules (`services/intelligence-platform-core/obs/metrics.go:15-30`): metric labels must never include `job_id`, `phase`, or error messages.
+
+  tools:
+    golangci-lint:
+      enabled: true
+    ruff:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    hadolint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/CLAUDE.md"
